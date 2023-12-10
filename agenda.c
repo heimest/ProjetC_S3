@@ -7,6 +7,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+void clearBuffer() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF) {
+        // Vide le buffer en lisant les caractères restants
+    }
+}
+
 char* strToLower(const char* str) {
     char* lowerStr = (char*)malloc(strlen(str) + 1);
     if (!lowerStr) return NULL;
@@ -52,15 +59,14 @@ agenda *contactSearch(directory* list){
     }
     nameInput[characNumber] = '\0';
     if (characNumber >= 3){
-        int* nbList = NULL;
-        agdList = automaticCompletion(list, nameInput, nbList);
+        agdList = automaticCompletion(list, nameInput);
         if (agdList == NULL){
             printf("There is no person matching your entry in the directory.\n");
             return NULL;
         } else{
             printf("This is a list of suggestion : \n");
-            for (int i=0;i<*nbList;i++){
-                printf("The suggestion 1 is %s %s", agdList[i]->ctt.name, agdList[i]->ctt.surname);
+            for (int i=0;i<1;i++){
+                printf("The suggestion 1 is %s %s.\n", agdList[i]->ctt.name, agdList[i]->ctt.surname);
             }
             int choice = 0;
             printf("Please select the suggestion that you want : \n");
@@ -73,32 +79,31 @@ agenda *contactSearch(directory* list){
     }
 }
 
-agenda **automaticCompletion(directory* list, char* name, int* nbList){
+agenda **automaticCompletion(directory* list, char* name){
     char *nameLow = strToLower(name);
     agenda* current = list->heads[3];
     agenda* prev = current;
     for (int i=3;i>=1;i--){
-        while (strToLower(current->ctt.name)[3-i] < nameLow[3-i] && current->nexts[i] != NULL){
+        while (strToLower(current->ctt.surname)[3-i] < nameLow[3-i] && current->nexts[i] != NULL){
             prev = current;
             current = current->nexts[i];
         }
-        if (strToLower(current->ctt.name)[3-i] != nameLow[3-i]){
+        if (strToLower(current->ctt.surname)[3-i] != nameLow[3-i]){
             return NULL;
         }
     }
     int nbCharac = strlen(name);
     for (int i=3;i<nbCharac;i++) {
-        while (strToLower(current->ctt.name)[i] < nameLow[i]) {
+        while (strToLower(current->ctt.surname)[i] < nameLow[i]) {
             prev = current;
             current = current->nexts[0];
         }
-        if (strToLower(current->ctt.name)[i] != nameLow[i]){
+        if (strToLower(current->ctt.surname)[i] != nameLow[i]){
             return NULL;
         }
     }
     agenda ** agdList = (agenda**) malloc(sizeof(agenda*));
     agdList[0] = current;
-    *nbList = 1;
     return agdList;
 }
 
@@ -153,43 +158,67 @@ int insertionDirectory(directory *dr, agenda* agd) {
     return 0;
 }
 
-agenda *createContact(directory* dr){
+void createContact(directory* dr){
     char name[100];
     int nameNumber = 0;
     char familyName[100];
     int surnameNumber = 0;
     agenda* agd = (agenda*) malloc(sizeof(agenda));
+    if (!agd) return;
+
     printf("Welcome to the contact creation menu : \n");
     printf("Please enter the name of the person : \n");
     while(nameNumber < 99 && (name[nameNumber] = getchar()) != '\n'){
         nameNumber++;
     }
-    agd->ctt.name = name;
+    name[nameNumber] = '\0';
+
+    // Allouer de la mémoire pour le nom
+    agd->ctt.name = (char*) malloc(strlen(name) + 1);
+    if (!agd->ctt.name) {
+        free(agd);
+    }
+    strcpy(agd->ctt.name, name);
+
     printf("Please enter the surname of the person : \n");
     while(surnameNumber < 99 && (familyName[surnameNumber] = getchar()) != '\n'){
         surnameNumber++;
     }
+    familyName[surnameNumber] = '\0';
 
-    agd->ctt.surname = familyName;
+    // Allouer de la mémoire pour le prénom
+    agd->ctt.surname = (char*) malloc(strlen(familyName) + 1);
+    if (!agd->ctt.surname) {
+        free(agd->ctt.name);
+        free(agd);
+    }
+    strcpy(agd->ctt.surname, familyName);
+
     agd->nbRdvs = 0;
     agd->aps = NULL;
     agd->nexts = NULL;
-    insertionDirectory(dr, agd);
-    printf("%s", dr->heads[0]->ctt.surname);
-    return agd;
+    if (!insertionDirectory(dr, agd)) {
+        free(agd->ctt.name);
+        free(agd->ctt.surname);
+        free(agd);
+    }
 }
 
 void createAppointment(directory* dr){
     printf("Welcome to the appointment creation menu : \n");
     printf("Does this appointment involve a new contact ? y/n\n");
-    char answer = getchar();
+
+    char answer;
+    int res = scanf(" %c", &answer);
     agenda *agd = NULL;
     if (answer == 'y'){
         printf("You are about to be redirected to the contact creation page.\n");
-        agd = createContact(dr);
-    } else{
+        createContact(dr);
+    } else if(answer == 'n'){
         printf("You are about to be redirected to the contact search page.\n");
         agd = contactSearch(dr);
+    }else{
+        printf("Error, please enter a valid value\n");
     }
     if (agd->nbRdvs == 0){
         agd->aps = (rdv*) malloc(sizeof(rdv));
@@ -197,8 +226,8 @@ void createAppointment(directory* dr){
         agd->aps = realloc(agd->aps, (agd->nbRdvs + 1)* sizeof(rdv));
     }
     printf("What is the purpose of this appointment : ");
-    char *purpose = NULL;
-    scanf("%s", purpose);
+    char purpose[256];
+    scanf("%255s", purpose);
     printf("What day is your appointment ? (format dd/mm/yyyy) : ");
     int date[3];
     scanf("%d/%d/%d", &date[0], &date[1], &date[2]);
@@ -208,12 +237,26 @@ void createAppointment(directory* dr){
     printf("What is the duration of this appointement ? (format hh:mm) ? ");
     int duration[2];
     scanf("%d:%d", &duration[0], &duration[1]);
-    agd->aps[agd->nbRdvs - 1].purpose = purpose;
+    if (agd->nbRdvs == 0){
+        agd->aps = (rdv*) malloc(sizeof(rdv));
+    } else {
+        agd->aps = realloc(agd->aps, (agd->nbRdvs + 1) * sizeof(rdv));
+    }
+
+    if (!agd->aps) {
+        // ALlocation error
+        return;
+    }
     for (int i=0;i<=1;i++){
-        agd->aps[agd->nbRdvs - 1].hour[i] = hour[i];
-        agd->aps[agd->nbRdvs - 1].duration[i] = duration[i];
+        agd->aps[agd->nbRdvs].hour[i] = hour[i];
+        agd->aps[agd->nbRdvs].duration[i] = duration[i];
     }
     for (int i=0;i<=2;i++){
-        agd->aps[agd->nbRdvs - 1].date[i] = date[i];
+        agd->aps[agd->nbRdvs].date[i] = date[i];
     }
+
+    agd->aps[agd->nbRdvs].purpose = strdup(purpose); // strdup pour copier la chaine
+
+
+    agd->nbRdvs++; // Augmenter le nombre de rendez-vous
 }

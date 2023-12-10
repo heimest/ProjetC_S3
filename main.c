@@ -11,9 +11,9 @@
 #include "agenda.h"
 
 int main(){
-    int choice = 3;
+    int choice = 0;
     printf("What part of the project do you want to test ?\n");
-    /*scanf("%d", &choice);*/
+    scanf("%d", &choice);
 
     if (choice == 1) {
         t_d_list *list = createList(4);
@@ -80,12 +80,30 @@ int main(){
     }
 
     if (choice == 3){
-        directory *dr = (directory*) malloc(sizeof(directory));
-        dr->heads = (agenda**)malloc(4 * sizeof(agenda*));
-        dr->nbElements = 0;
-        dr = createContact(dr);
+    directory *dr = (directory*) malloc(sizeof(directory));
+    if (!dr) {
+        return 1;
+    }
+    dr->heads = (agenda**)malloc(4 * sizeof(agenda*));
+    if (!dr->heads) {
+        free(dr);
+        return 1;
+    }
+    for (int i = 0; i < 4; i++) {
+        dr->heads[i] = NULL;
+    }
+    dr->nbElements = 0;
+
+    createContact(dr);
+    if (dr->heads[0] && dr->heads[0]->ctt.surname) {
         printf("%s", dr->heads[0]->ctt.surname);
-        createAppointment(dr);
-        printf("Fini");
+        printf("\n");
+    } else {
+        printf("Contact information is not available.\n");
+    }
+
+    createAppointment(dr);
+    contactRdvs(dr->heads[0]);
+    printf("Fini");
     }
 }

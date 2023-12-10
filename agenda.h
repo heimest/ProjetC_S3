@@ -35,15 +35,17 @@ typedef struct directory{
     int nbElements;
 } directory;
 
+void clearBuffer();
+
 int compareNames(const char* name1, const char* name2);
 char* strToLower(const char* str);
 
-agenda **automaticCompletion(directory* list, char* name, int* nbList);
+agenda **automaticCompletion(directory* list, char* name);
 agenda *contactSearch(directory* list);
 
 void contactRdvs(agenda *ctt);
 
 int insertionDirectory(directory* dr, agenda* agd);
 
-agenda *createContact(directory* dr);
+void createContact(directory* dr);
 void createAppointment(directory* dr);
